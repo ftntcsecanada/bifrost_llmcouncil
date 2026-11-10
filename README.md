@@ -70,6 +70,8 @@ Get a virtual key from your Bifrost admin. Keep `BIFROST_API_URL` on the `/opena
 
 Edit `backend/config.py`:
 
+*** Select Council and Chairman LLM models *** 
+
 ```python
 COUNCIL_MODELS = [
     "vllm/qwen3-8-27b-local",
