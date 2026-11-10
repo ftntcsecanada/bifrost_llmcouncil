@@ -14,8 +14,14 @@
 
 .sidebar-header h1 {
   font-size: 18px;
-  margin: 0 0 12px 0;
+  margin: 0 0 2px 0;
   color: #333;
+}
+
+.powered-by {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 12px;
 }
 
 .new-conversation-btn {
@@ -66,10 +72,40 @@
   border: 1px solid #4a90e2;
 }
 
+.conversation-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .conversation-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #333;
   font-size: 14px;
   margin-bottom: 4px;
+}
+
+.conversation-delete {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0;
+  padding: 0 2px;
+  transition: opacity 0.15s;
+}
+
+.conversation-item:hover .conversation-delete,
+.conversation-delete:focus {
+  opacity: 0.6;
+}
+
+.conversation-delete:hover {
+  opacity: 1 !important;
 }
 
 .conversation-meta {

@@ -1,1 +1,1 @@
-"""LLM Council backend package."""
+"""FortiAICouncil backend package."""

@@ -1,5 +1,5 @@
 /**
- * API client for the LLM Council backend.
+ * API client for the FortiAICouncil backend.
  */
 
 const API_BASE = 'http://localhost:8001';
@@ -44,6 +44,46 @@ export const api = {
       throw new Error('Failed to get conversation');
     }
     return response.json();
+  },
+
+  /** Delete a conversation. */
+  async deleteConversation(conversationId) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}`,
+      { method: 'DELETE' }
+    );
+    if (!response.ok) throw new Error('Failed to delete conversation');
+  },
+
+  /** List uploaded wiki / SKILL.md files. */
+  async listWiki() {
+    const response = await fetch(`${API_BASE}/api/wiki`);
+    if (!response.ok) throw new Error('Failed to list wiki files');
+    return response.json();
+  },
+
+  /** Upload a SKILL.md / wiki page. */
+  async uploadWiki(file) {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await fetch(`${API_BASE}/api/wiki`, {
+      method: 'POST',
+      body: form,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Upload failed');
+    }
+    return response.json();
+  },
+
+  /** Remove an uploaded wiki file. */
+  async deleteWiki(name) {
+    const response = await fetch(
+      `${API_BASE}/api/wiki/${encodeURIComponent(name)}`,
+      { method: 'DELETE' }
+    );
+    if (!response.ok) throw new Error('Delete failed');
   },
 
   /**

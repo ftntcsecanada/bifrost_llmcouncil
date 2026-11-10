@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import './Sidebar.css';
+import WikiPanel from './WikiPanel';
 
 export default function Sidebar({
   conversations,
   currentConversationId,
   onSelectConversation,
   onNewConversation,
+  onDeleteConversation,
 }) {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h1>LLM Council</h1>
+        <h1>FortiAICouncil</h1>
+        <div className="powered-by">powered by Bifrost</div>
         <button className="new-conversation-btn" onClick={onNewConversation}>
           + New Conversation
         </button>
@@ -28,8 +31,23 @@ export default function Sidebar({
               }`}
               onClick={() => onSelectConversation(conv.id)}
             >
-              <div className="conversation-title">
-                {conv.title || 'New Conversation'}
+              <div className="conversation-row">
+                <div className="conversation-title">
+                  {conv.title || 'New Conversation'}
+                </div>
+                <button
+                  className="conversation-delete"
+                  title="Delete conversation"
+                  aria-label="Delete conversation"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Delete this conversation?')) {
+                      onDeleteConversation(conv.id);
+                    }
+                  }}
+                >
+                  🗑
+                </button>
               </div>
               <div className="conversation-meta">
                 {conv.message_count} messages
@@ -38,6 +56,8 @@ export default function Sidebar({
           ))
         )}
       </div>
+
+      <WikiPanel />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-"""Configuration for the LLM Council."""
+"""Configuration for the FortiAICouncil."""
 
 import os
 from dotenv import load_dotenv
@@ -20,6 +20,9 @@ COUNCIL_MODELS = [
 # Chairman model - synthesizes final response
 CHAIRMAN_MODEL = "azure/gpt-5.5"
 
+# Model for short conversation titles (smallest/fastest council model)
+TITLE_MODEL = "vllm/qwen3-8-flash-next-ant"
+
 # Bifrost OpenAI-compatible base URL (client appends /chat/completions)
 BIFROST_API_URL = os.getenv(
     "BIFROST_API_URL", "https://bifrost.fabriclab.ca/openai/v1"
@@ -27,3 +30,7 @@ BIFROST_API_URL = os.getenv(
 
 # Data directory for conversation storage
 DATA_DIR = "data/conversations"
+
+# LLM wiki / SKILL.md uploads, injected into every stage prompt
+WIKI_DIR = "data/wiki"
+WIKI_MAX_CHARS = 100_000

@@ -1,8 +1,9 @@
-"""3-stage LLM Council orchestration."""
+"""3-stage FortiAICouncil orchestration."""
 
 from typing import List, Dict, Any, Tuple
 from .bifrost import query_models_parallel, query_model
-from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
+from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, TITLE_MODEL
+from .wiki import with_context
 
 
 async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
@@ -15,7 +16,7 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     Returns:
         List of dicts with 'model' and 'response' keys
     """
-    messages = [{"role": "user", "content": user_query}]
+    messages = [{"role": "user", "content": with_context(user_query)}]
 
     # Query all models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -92,7 +93,7 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
-    messages = [{"role": "user", "content": ranking_prompt}]
+    messages = [{"role": "user", "content": with_context(ranking_prompt)}]
 
     # Get rankings from all council models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -139,7 +140,7 @@ async def stage3_synthesize_final(
         for result in stage2_results
     ])
 
-    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+    chairman_prompt = f"""You are the Chairman of the FortiAICouncil. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
 
 Original Question: {user_query}
 
@@ -156,7 +157,7 @@ Your task as Chairman is to synthesize all of this information into a single, co
 
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
-    messages = [{"role": "user", "content": chairman_prompt}]
+    messages = [{"role": "user", "content": with_context(chairman_prompt)}]
 
     # Query the chairman model
     response = await query_model(CHAIRMAN_MODEL, messages)
@@ -274,8 +275,8 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    # Smallest Bifrost model for title generation (fast and cheap)
+    response = await query_model(TITLE_MODEL, messages, timeout=30.0)
 
     if response is None:
         # Fallback to a generic title

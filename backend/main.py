@@ -1,6 +1,6 @@
-"""FastAPI backend for LLM Council."""
+"""FastAPI backend for FortiAICouncil."""
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -9,10 +9,10 @@ import uuid
 import json
 import asyncio
 
-from . import storage
+from . import storage, wiki
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
 
-app = FastAPI(title="LLM Council API")
+app = FastAPI(title="FortiAICouncil API")
 
 # Enable CORS for local development
 app.add_middleware(
@@ -53,7 +53,30 @@ class Conversation(BaseModel):
 @app.get("/")
 async def root():
     """Health check endpoint."""
-    return {"status": "ok", "service": "LLM Council API"}
+    return {"status": "ok", "service": "FortiAICouncil API"}
+
+
+@app.get("/api/wiki")
+async def list_wiki():
+    """List uploaded wiki / SKILL.md files."""
+    return wiki.list_files()
+
+
+@app.post("/api/wiki")
+async def upload_wiki(file: UploadFile = File(...)):
+    """Upload a SKILL.md or wiki page (.md/.markdown/.txt); replaces same-name file."""
+    try:
+        return wiki.save_file(file.filename, await file.read())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/wiki/{name}")
+async def delete_wiki(name: str):
+    """Remove an uploaded wiki file."""
+    if not wiki.delete_file(name):
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"status": "deleted"}
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
@@ -77,6 +100,14 @@ async def get_conversation(conversation_id: str):
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return conversation
+
+
+@app.delete("/api/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Delete a conversation."""
+    if not storage.delete_conversation(conversation_id):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"status": "deleted"}
 
 
 @app.post("/api/conversations/{conversation_id}/message")
