@@ -1,0 +1,383 @@
+<title>CNAPP Council Simulation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one column, a question bar on top, a three-stage rail, then one panel per stage. Colors and fonts match the FortiAICouncil app UI; Stage 3 uses the app's green conclusion tint. */
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --ink: #333333;
+  --ink-2: #666666;
+  --line: #e0e0e0;
+  --accent: #4a90e2;
+  --accent-soft: #e8f0fe;
+  --final-bg: #f0fff0;
+  --final-line: #c8e6c8;
+  --warn: #9a5b00;
+  --warn-soft: #fbefd9;
+  --bad: #c0392b;
+  --bad-soft: #f8e3e1;
+  --f-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  --f-mono: monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #161a1f;
+    --surface: #1e242b;
+    --ink: #e8eaed;
+    --ink-2: #a0a7b0;
+    --line: #333b44;
+    --accent: #6aa9ee;
+    --accent-soft: #1c2f4a;
+    --final-bg: #17291c;
+    --final-line: #2f5a38;
+    --warn: #f0b45a;
+    --warn-soft: #3a2c10;
+    --bad: #f08a82;
+    --bad-soft: #3d1e1c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #161a1f;
+  --surface: #1e242b;
+  --ink: #e8eaed;
+  --ink-2: #a0a7b0;
+  --line: #333b44;
+  --accent: #6aa9ee;
+  --accent-soft: #1c2f4a;
+  --final-bg: #17291c;
+  --final-line: #2f5a38;
+  --warn: #f0b45a;
+  --warn-soft: #3a2c10;
+  --bad: #f08a82;
+  --bad-soft: #3d1e1c;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 18px; font-weight: 650; }
+h3 { font-size: 15px; font-weight: 600; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.label {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-2);
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.sub { color: var(--ink-2); margin: 4px 0 0; max-width: 62ch; }
+button.replay {
+  font: inherit; font-weight: 600; cursor: pointer;
+  background: var(--accent); color: #fff;
+  border: 0; border-radius: 6px; padding: 9px 16px;
+}
+button.replay:disabled { opacity: 0.55; cursor: default; }
+.question {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.question p { margin: 0; font-size: 17px; font-weight: 500; }
+
+.rail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.step {
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+  background: var(--surface); display: flex; flex-direction: column; gap: 2px;
+}
+.step .state { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.step[data-state="running"] { border-color: var(--accent); }
+.step[data-state="running"] .state { color: var(--accent); }
+.step[data-state="done"] .state { color: var(--accent); }
+.step b { font-weight: 600; }
+
+.stage { display: flex; flex-direction: column; gap: 14px; transition: opacity 0.4s; }
+.stage[hidden] { display: none; }
+.stage-head { display: flex; flex-direction: column; gap: 4px; }
+.stage-head p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.card .who { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.card ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.flags { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.flag { font-size: 13px; border-radius: 5px; padding: 6px 8px; }
+.flag.warn { background: var(--warn-soft); color: var(--warn); }
+.flag.note { background: var(--accent-soft); color: var(--accent); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
+td.rk { text-align: center; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.rk-1 { color: var(--accent); font-weight: 600; }
+.rk-3 { color: var(--bad); }
+.self { background: var(--warn-soft); }
+button.replay:hover:not(:disabled) { filter: brightness(0.92); }
+
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 46px; gap: 10px; align-items: center; }
+.track { height: 14px; background: var(--bg); border-radius: 3px; position: relative; }
+.fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+.fill.mid { background: var(--ink-2); }
+.axis { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 46px; gap: 10px; }
+.axis .ticks { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }
+
+.final { background: var(--final-bg); border-color: var(--final-line); }
+.rank-list { display: flex; flex-direction: column; }
+.rank-row {
+  display: grid; grid-template-columns: 28px minmax(0, 1.1fr) minmax(0, 1.6fr) auto;
+  gap: 14px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.rank-row:last-child { border-bottom: 0; }
+.rank-n { font-family: var(--f-mono); font-size: 20px; color: var(--accent); line-height: 1.2; }
+.rank-row p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.rank-row .name { font-weight: 600; font-size: 16px; }
+.src { display: flex; gap: 4px; align-items: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--accent); }
+.dot.on { background: var(--accent); }
+.src small { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); margin-left: 4px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 13px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--ink-2); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.dropped li { margin-bottom: 4px; }
+ul.plain { margin: 0; padding-left: 18px; }
+footer { color: var(--ink-2); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 640px) {
+  .rank-row { grid-template-columns: 24px 1fr; }
+  .rank-row .src, .rank-row .why { grid-column: 2; }
+  .bar-row, .axis { grid-template-columns: 110px 1fr 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .stage { transition: none; } }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.speed { display: flex; gap: 0; }
+.speed .ctl { border-radius: 0; margin-left: -1px; }
+.speed .ctl:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.speed .ctl:last-child { border-radius: 0 6px 6px 0; }
+button.ctl {
+  font: inherit; cursor: pointer; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px;
+}
+button.ctl:disabled { opacity: 0.5; cursor: default; }
+button.ctl[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="top">
+      <div>
+        <div class="label">FortiAICouncil · powered by Bifrost</div>
+        <h1>CNAPP Council Simulation</h1>
+        <p class="sub">Simulation of a real run. Replays how three models answered, reviewed each other without names attached, and how the chairman built one answer from the best of their input.</p>
+      </div>
+      <div class="controls" role="group" aria-label="Simulation controls">
+        <button class="replay" id="start" type="button">Start Demo</button>
+        <button class="ctl" id="pause" type="button" disabled>Pause</button>
+        <div class="speed" role="group" aria-label="Speed">
+          <button class="ctl" type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+          <button class="ctl" type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button class="ctl" type="button" data-speed="1.5" aria-pressed="false">1.5×</button>
+        </div>
+      </div>
+    </div>
+    <div class="question">
+      <span class="label">Question asked</span>
+      <p>What are the top best 5 CNAPP platforms in 2026?</p>
+    </div>
+    <div class="rail" id="rail">
+      <div class="step" data-state="idle" data-step="1"><span class="label">Stage 1</span><b>First opinions</b><span class="state">Waiting</span></div>
+      <div class="step" data-state="idle" data-step="2"><span class="label">Stage 2</span><b>Anonymous review</b><span class="state">Waiting</span></div>
+      <div class="step" data-state="idle" data-step="3"><span class="label">Stage 3</span><b>Chairman synthesis</b><span class="state">Waiting</span></div>
+    </div>
+  </header>
+
+  <section class="stage" id="s1" hidden>
+    <div class="stage-head">
+      <h2>Stage 1 · Each model answers alone</h2>
+      <p>The same question goes to every council model in parallel. Shown with real names here; in Stage 2 they become Response A, B and C.</p>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <div class="who"><h3>Response A</h3><span class="mono label">qwen3-8-27b-local</span></div>
+        <ol><li>Palo Alto Prisma Cloud</li><li>Wiz</li><li>Orca Security</li><li>CrowdStrike Falcon Cloud Security</li><li>Microsoft Defender for Cloud</li></ol>
+        <div class="flags"><div class="flag warn">States Wiz had a 2024 IPO. Reviewers flagged it as wrong.</div><div class="flag note">Adds a "how to choose" guide and honorable mentions.</div></div>
+      </article>
+      <article class="card">
+        <div class="who"><h3>Response B</h3><span class="mono label">qwen3-8-flash-next-ant</span></div>
+        <ol><li>Palo Alto Prisma Cloud</li><li>CrowdStrike Falcon Cloud Security</li><li>Microsoft Defender for Cloud</li><li>Wiz</li></ol>
+        <div class="flags"><div class="flag warn">Lists four platforms, not five.</div><div class="flag note">Says up front that no single 2026 ranking is agreed, then gives best-fit and watch-outs per vendor.</div></div>
+      </article>
+      <article class="card">
+        <div class="who"><h3>Response C</h3><span class="mono label">gpt-oss-120b</span></div>
+        <ol><li>Palo Alto Prisma Cloud</li><li>Check Point CloudGuard Posture</li><li>Microsoft Defender for Cloud</li><li>Snyk Secure DevOps Platform</li><li>Cortex XSOAR + XDR-CNAPP</li></ol>
+        <div class="flags"><div class="flag warn">Gives per-workload prices and sub-2-second latency figures with no source.</div><div class="flag warn">Leaves out Wiz, Orca and CrowdStrike.</div></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="stage" id="s2" hidden>
+    <div class="stage-head">
+      <h2>Stage 2 · Models rank each other without names</h2>
+      <p>Each model read all three answers as Response A, B and C and ranked them. It was not told which one it wrote.</p>
+    </div>
+    <div class="panel">
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Reviewer</th><th class="rk">Rank of A</th><th class="rk">Rank of B</th><th class="rk">Rank of C</th></tr></thead>
+          <tbody>
+            <tr><td>qwen3-8-27b-local<br><span class="label">wrote A</span></td><td class="rk rk-1 self">1</td><td class="rk">2</td><td class="rk rk-3">3</td></tr>
+            <tr><td>qwen3-8-flash-next-ant<br><span class="label">wrote B</span></td><td class="rk rk-1">1</td><td class="rk self">2</td><td class="rk rk-3">3</td></tr>
+            <tr><td>gpt-oss-120b<br><span class="label">wrote C</span></td><td class="rk">2</td><td class="rk rk-3">3</td><td class="rk rk-1 self">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bars" aria-label="Average rank, lower is better">
+        <span class="label">Average rank across reviewers · lower is better</span>
+        <div class="bar-row"><span>Response A · qwen3-8-27b</span><div class="track"><div class="fill" style="width:33.3%"></div></div><span class="mono">1.33</span></div>
+        <div class="bar-row"><span>Response B · flash-next</span><div class="track"><div class="fill mid" style="width:58.3%"></div></div><span class="mono">2.33</span></div>
+        <div class="bar-row"><span>Response C · gpt-oss-120b</span><div class="track"><div class="fill mid" style="width:58.3%"></div></div><span class="mono">2.33</span></div>
+        <div class="axis"><span></span><div class="ticks"><span>1</span><span>2</span><span>3</span><span>4</span></div><span></span></div>
+      </div>
+      <div class="cols">
+        <div class="flag warn">The model that wrote C put C first. Both other reviewers put it last, so the peer review pulled it down to a tie for second.</div>
+        <div class="flag note">Two of three reviewers called out the Wiz IPO claim in A, including the model that wrote it.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="s3" hidden>
+    <div class="stage-head">
+      <h2>Stage 3 · Delivered answer, built from the best input</h2>
+      <p>The chairman, azure/gpt-5.5, read all three answers and all three reviews. It kept what several models agreed on, kept the useful detail, and dropped what the reviews undermined.</p>
+    </div>
+    <div class="panel final">
+      <div class="rank-list">
+        <div class="rank-row"><span class="rank-n">1</span><div><div class="name">Wiz</div><span class="label">Agentless · attack paths</span></div><p class="why">Fast cloud visibility and prioritized risk across multi-cloud. Check runtime protection depth for your use case.</p><div class="src" title="Named in 2 of 3 council answers"><span class="dot on"></span><span class="dot on"></span><span class="dot"></span><small>2/3</small></div></div>
+        <div class="rank-row"><span class="rank-n">2</span><div><div class="name">Palo Alto Prisma Cloud</div><span class="label">Broadest suite</span></div><p class="why">Largest CNAPP breadth for regulated, complex multi-cloud estates. Can be heavy to deploy, tune and license.</p><div class="src" title="Named in 3 of 3 council answers"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><small>3/3</small></div></div>
+        <div class="rank-row"><span class="rank-n">3</span><div><div class="name">Microsoft Defender for Cloud</div><span class="label">Azure and hybrid</span></div><p class="why">Strong fit for Azure-heavy shops and Microsoft SOCs. Less depth on AWS/GCP-heavy estates.</p><div class="src" title="Named in 3 of 3 council answers"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><small>3/3</small></div></div>
+        <div class="rank-row"><span class="rank-n">4</span><div><div class="name">CrowdStrike Falcon Cloud Security</div><span class="label">Runtime detection</span></div><p class="why">Best for runtime threat detection and teams already on Falcon. Compare posture breadth against Wiz and Prisma.</p><div class="src" title="Named in 2 of 3 council answers"><span class="dot on"></span><span class="dot on"></span><span class="dot"></span><small>2/3</small></div></div>
+        <div class="rank-row"><span class="rank-n">5</span><div><div class="name">Orca Security</div><span class="label">Agentless · fast time to value</span></div><p class="why">Broad agentless risk visibility across AWS, Azure and GCP. Validate runtime prevention separately.</p><div class="src" title="Named in 1 of 3 council answers"><span class="dot on"></span><span class="dot"></span><span class="dot"></span><small>1/3</small></div></div>
+      </div>
+      <span class="label">Dots show how many of the three Stage 1 answers named the platform.</span>
+      <div class="cols">
+        <div>
+          <span class="label">Moved to honorable mentions</span>
+          <div class="chips" style="margin-top:6px"><span class="chip">Sysdig</span><span class="chip">Check Point CloudGuard</span><span class="chip">Fortinet Lacework / FortiCNAPP</span><span class="chip">Snyk</span><span class="chip">Datadog Cloud Security</span><span class="chip">Tenable Cloud Security / Ermetic</span></div>
+        </div>
+        <div class="dropped">
+          <span class="label">Left out of the final</span>
+          <ul class="plain" style="margin-top:6px">
+            <li>Response C's prices and latency figures.</li>
+            <li>Cortex XSOAR as a CNAPP.</li>
+            <li>The Wiz 2024 IPO claim.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>If your priority is</th><th>Start with</th></tr></thead>
+          <tbody>
+            <tr><td>Fast visibility and attack-path prioritization</td><td>Wiz or Orca</td></tr>
+            <tr><td>Broadest enterprise suite</td><td>Prisma Cloud</td></tr>
+            <tr><td>Azure and Microsoft ecosystem</td><td>Microsoft Defender for Cloud</td></tr>
+            <tr><td>Runtime detection and response</td><td>CrowdStrike, Prisma Cloud or Sysdig</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Recorded 10 Nov 2026 from a FortiAICouncil run on the Bifrost gateway. Rankings, flags and the final answer come from that run's stored output.</span>
+    <span>The fourth configured model, azure/glm-5.2, returned 404 and did not take part.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var startBtn = document.getElementById('start');
+  var pauseBtn = document.getElementById('pause');
+  var speedBtns = document.querySelectorAll('[data-speed]');
+  var rail = document.getElementById('rail');
+  var stages = [document.getElementById('s1'), document.getElementById('s2'), document.getElementById('s3')];
+  var steps = rail.querySelectorAll('.step');
+  var labels = [
+    ['Querying 4 models\u2026', '3 of 4 models answered'],
+    ['Reviewing anonymously\u2026', '3 rankings parsed'],
+    ['Chairman writing\u2026', 'azure/gpt-5.5']
+  ];
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var speed = 1, paused = false, runId = 0;
+
+  // Waits ms of "demo time". Slower speed stretches it, pause freezes it.
+  function wait(ms, id) {
+    return new Promise(function (resolve) {
+      var left = reduce ? 0 : ms;
+      (function tick() {
+        if (id !== runId) return resolve(false);
+        if (left <= 0) return resolve(true);
+        if (!paused) left -= 50 * speed;
+        setTimeout(tick, 50);
+      })();
+    });
+  }
+  function setStep(i, state, text) {
+    steps[i].setAttribute('data-state', state);
+    steps[i].querySelector('.state').textContent = text;
+  }
+  function reset() {
+    stages.forEach(function (s) { s.hidden = true; });
+    steps.forEach(function (s, i) { setStep(i, 'idle', 'Waiting'); });
+  }
+
+  async function play() {
+    var id = ++runId;
+    paused = false;
+    pauseBtn.textContent = 'Pause';
+    pauseBtn.disabled = false;
+    startBtn.textContent = 'Restart Demo';
+    reset();
+    for (var i = 0; i < 3; i++) {
+      setStep(i, 'running', labels[i][0]);
+      if (!(await wait(1800, id))) return;
+      stages[i].hidden = false;
+      setStep(i, 'done', labels[i][1]);
+      stages[i].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+      if (!(await wait(800, id))) return;
+    }
+    pauseBtn.disabled = true;
+    startBtn.textContent = 'Start Demo';
+  }
+
+  startBtn.addEventListener('click', play);
+  pauseBtn.addEventListener('click', function () {
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  });
+  speedBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      speed = parseFloat(b.getAttribute('data-speed'));
+      speedBtns.forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    });
+  });
+})();
+</script>
