@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { api } from '../api';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
@@ -50,6 +51,17 @@ export default function ChatInterface({
 
   return (
     <div className="chat-interface">
+      {conversation.messages.length > 0 && (
+        <div className="export-bar">
+          <a
+            className="export-link"
+            href={api.exportHtmlUrl(conversation.id)}
+            download
+          >
+            Export as HTML
+          </a>
+        </div>
+      )}
       <div className="messages-container">
         {conversation.messages.length === 0 ? (
           <div className="empty-state">

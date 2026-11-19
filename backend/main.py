@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import uuid
@@ -10,6 +10,7 @@ import json
 import asyncio
 
 from . import storage, wiki
+from .render import render_conversation_html
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
 
 app = FastAPI(title="FortiAICouncil API")
@@ -71,12 +72,24 @@ async def upload_wiki(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.delete("/api/wiki/{name}")
+@app.delete("/api/wiki/{name:path}")
 async def delete_wiki(name: str):
     """Remove an uploaded wiki file."""
     if not wiki.delete_file(name):
         raise HTTPException(status_code=404, detail="File not found")
     return {"status": "deleted"}
+
+
+@app.get("/api/conversations/{conversation_id}/export.html")
+async def export_conversation_html(conversation_id: str):
+    """Render a conversation as a standalone HTML page (download)."""
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return HTMLResponse(
+        render_conversation_html(conversation),
+        headers={"Content-Disposition": f'attachment; filename="council-{conversation_id[:8]}.html"'},
+    )
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])

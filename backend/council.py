@@ -16,7 +16,7 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     Returns:
         List of dicts with 'model' and 'response' keys
     """
-    messages = [{"role": "user", "content": with_context(user_query)}]
+    messages = [{"role": "user", "content": with_context(user_query, user_query)}]
 
     # Query all models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -93,7 +93,7 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
-    messages = [{"role": "user", "content": with_context(ranking_prompt)}]
+    messages = [{"role": "user", "content": with_context(ranking_prompt, user_query)}]
 
     # Get rankings from all council models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -157,7 +157,7 @@ Your task as Chairman is to synthesize all of this information into a single, co
 
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
-    messages = [{"role": "user", "content": with_context(chairman_prompt)}]
+    messages = [{"role": "user", "content": with_context(chairman_prompt, user_query)}]
 
     # Query the chairman model
     response = await query_model(CHAIRMAN_MODEL, messages)

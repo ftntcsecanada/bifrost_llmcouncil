@@ -7,6 +7,7 @@ export default function WikiPanel() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
+  const folderRef = useRef(null);
 
   const refresh = async () => {
     try {
@@ -21,7 +22,10 @@ export default function WikiPanel() {
   }, []);
 
   const onPick = async (e) => {
-    const picked = Array.from(e.target.files || []);
+    // folder picks include non-text files (images, etc.); keep wiki text only
+    const picked = Array.from(e.target.files || []).filter((f) =>
+      /\.(md|markdown|txt)$/i.test(f.name)
+    );
     e.target.value = '';
     if (!picked.length) return;
     setBusy(true);
@@ -50,7 +54,7 @@ export default function WikiPanel() {
     <div className="wiki-panel">
       <div className="wiki-title">
         LLM Wiki / SKILL.md
-        <span className="wiki-hint">added to every council prompt</span>
+        <span className="wiki-hint">full if small, else most relevant pages</span>
       </div>
 
       <input
@@ -67,6 +71,23 @@ export default function WikiPanel() {
         disabled={busy}
       >
         {busy ? 'Uploading…' : '+ Upload files'}
+      </button>
+
+      <input
+        ref={folderRef}
+        type="file"
+        webkitdirectory=""
+        directory=""
+        multiple
+        onChange={onPick}
+        hidden
+      />
+      <button
+        className="wiki-upload-btn"
+        onClick={() => folderRef.current?.click()}
+        disabled={busy}
+      >
+        + Upload wiki folder
       </button>
 
       {error && <div className="wiki-error">{error}</div>}

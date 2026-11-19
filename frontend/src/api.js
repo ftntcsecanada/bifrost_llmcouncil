@@ -65,7 +65,8 @@ export const api = {
   /** Upload a SKILL.md / wiki page. */
   async uploadWiki(file) {
     const form = new FormData();
-    form.append('file', file);
+    // webkitRelativePath is set for folder picks, keeping the wiki's structure
+    form.append('file', file, file.webkitRelativePath || file.name);
     const response = await fetch(`${API_BASE}/api/wiki`, {
       method: 'POST',
       body: form,
@@ -75,6 +76,11 @@ export const api = {
       throw new Error(err.detail || 'Upload failed');
     }
     return response.json();
+  },
+
+  /** URL that downloads a conversation as a standalone HTML page. */
+  exportHtmlUrl(conversationId) {
+    return `${API_BASE}/api/conversations/${conversationId}/export.html`;
   },
 
   /** Remove an uploaded wiki file. */

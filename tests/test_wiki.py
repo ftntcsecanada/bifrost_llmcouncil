@@ -67,3 +67,49 @@ def test_api_upload_list_delete():
     assert c.post("/api/wiki", files={"file": ("x.exe", b"1")}).status_code == 400
     assert c.delete("/api/wiki/SKILL.md").status_code == 200
     assert c.delete("/api/wiki/SKILL.md").status_code == 404
+
+
+# --- folder support & relevance selection ---
+
+def test_nested_paths_preserved_and_no_collision(wiki_dir):
+    wiki.save_file("a/overview.md", b"A")
+    wiki.save_file("b/overview.md", b"B")
+    assert [f["name"] for f in wiki.list_files()] == ["a/overview.md", "b/overview.md"]
+    assert (wiki_dir / "a" / "overview.md").read_text() == "A"
+
+
+def test_traversal_segments_stripped(wiki_dir):
+    wiki.save_file("x/../../y/./z.md", b"x")
+    assert (wiki_dir / "x" / "y" / "z.md").exists()
+
+
+def test_delete_nested():
+    wiki.save_file("a/b.md", b"x")
+    assert wiki.delete_file("a/b.md") is True
+    assert wiki.list_files() == []
+
+
+def test_context_selects_relevant_pages_when_over_cap():
+    wiki.save_file("index.md", b"# Index\n- firewall\n- cooking")
+    wiki.save_file("topics/firewall.md", b"firewall policy rules " * 10)
+    wiki.save_file("topics/cooking.md", b"pasta sauce recipes " * 10)
+    ctx = wiki.build_context(max_chars=400, query="how do firewall policy rules work?")
+    assert "topics/firewall.md" in ctx
+    assert "topics/cooking.md" not in ctx
+    assert "index.md" in ctx
+
+
+def test_context_full_when_fits_even_with_query():
+    wiki.save_file("a.md", b"alpha")
+    wiki.save_file("b.md", b"beta")
+    ctx = wiki.build_context(max_chars=1000, query="alpha")
+    assert "alpha" in ctx and "beta" in ctx
+
+
+def test_api_nested_upload_and_delete():
+    from backend.main import app
+
+    c = TestClient(app)
+    r = c.post("/api/wiki", files={"file": ("sub/p.md", b"hi", "text/markdown")})
+    assert r.status_code == 200 and r.json()["name"] == "sub/p.md"
+    assert c.delete("/api/wiki/sub/p.md").status_code == 200
