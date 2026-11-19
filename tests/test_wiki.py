@@ -113,3 +113,32 @@ def test_api_nested_upload_and_delete():
     r = c.post("/api/wiki", files={"file": ("sub/p.md", b"hi", "text/markdown")})
     assert r.status_code == 200 and r.json()["name"] == "sub/p.md"
     assert c.delete("/api/wiki/sub/p.md").status_code == 200
+
+
+def test_delete_folder_removes_tree_only(wiki_dir):
+    wiki.save_file("w1/index.md", b"x")
+    wiki.save_file("w1/topics/a.md", b"x")
+    wiki.save_file("w2/index.md", b"x")
+    wiki.save_file("root.md", b"x")
+    assert wiki.delete_folder("w1") == 2
+    assert [f["name"] for f in wiki.list_files()] == ["root.md", "w2/index.md"]
+    assert not (wiki_dir / "w1").exists()
+
+
+def test_delete_folder_missing_or_unsafe(wiki_dir):
+    wiki.save_file("a.md", b"x")
+    assert wiki.delete_folder("nope") == 0
+    assert wiki.delete_folder("") == 0
+    assert wiki.delete_folder("../..") == 0
+    assert wiki.delete_folder("a.md") == 0  # a file, not a folder
+    assert [f["name"] for f in wiki.list_files()] == ["a.md"]
+
+
+def test_api_delete_folder():
+    from backend.main import app
+
+    c = TestClient(app)
+    c.post("/api/wiki", files={"file": ("w/p.md", b"hi", "text/markdown")})
+    r = c.delete("/api/wiki-folder/w")
+    assert r.status_code == 200 and r.json()["deleted"] == 1
+    assert c.delete("/api/wiki-folder/w").status_code == 404

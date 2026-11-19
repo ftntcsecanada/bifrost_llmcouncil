@@ -10,6 +10,8 @@ export default function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
+  webFallback,
+  onToggleWeb,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -84,6 +86,29 @@ export default function ChatInterface({
                 <div className="assistant-message">
                   <div className="message-label">FortiAICouncil</div>
 
+                  {msg.webSearch && (
+                    <div className="web-note">
+                      {msg.webSearch.loading ? (
+                        'Checking the wiki, then searching the web if needed…'
+                      ) : msg.webSearch.sources.length === 0 ? (
+                        'Answered from the wiki (no web search needed).'
+                      ) : (
+                        <>
+                          Web search used:
+                          <ul>
+                            {msg.webSearch.sources.map((s) => (
+                              <li key={s.url}>
+                                <a href={s.url} target="_blank" rel="noreferrer">
+                                  {s.title || s.url}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Stage 1 */}
                   {msg.loading?.stage1 && (
                     <div className="stage-loading">
@@ -134,6 +159,14 @@ export default function ChatInterface({
 
       {conversation.messages.length === 0 && (
         <form className="input-form" onSubmit={handleSubmit}>
+          <label className="web-toggle">
+            <input
+              type="checkbox"
+              checked={!!webFallback}
+              onChange={(e) => onToggleWeb(e.target.checked)}
+            />
+            Search the web (DuckDuckGo) when the wiki doesn't cover it
+          </label>
           <textarea
             className="message-input"
             placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"

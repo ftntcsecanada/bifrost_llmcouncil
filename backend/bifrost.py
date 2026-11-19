@@ -27,9 +27,11 @@ async def query_model(
         "Content-Type": "application/json",
     }
 
+    from .web import apply_web  # lazy: web imports this module
+
     payload = {
         "model": model,
-        "messages": messages,
+        "messages": apply_web(model, messages),
     }
 
     try:

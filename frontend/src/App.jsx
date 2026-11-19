@@ -8,6 +8,22 @@ function App() {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
+  const [webFallback, setWebFallback] = useState(() => {
+    try {
+      return localStorage.getItem('webFallback') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleWeb = (value) => {
+    setWebFallback(value);
+    try {
+      localStorage.setItem('webFallback', value ? '1' : '0');
+    } catch {
+      // storage unavailable; toggle still works for this session
+    }
+  };
   const [isLoading, setIsLoading] = useState(false);
 
   // Load conversations on mount
@@ -105,6 +121,22 @@ function App() {
       // Send message with streaming
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
+          case 'web_search_start':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messages.length - 1].webSearch = { loading: true, sources: [] };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'web_search_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messages.length - 1].webSearch = { loading: false, sources: event.data };
+              return { ...prev, messages };
+            });
+            break;
+
           case 'stage1_start':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
@@ -182,7 +214,7 @@ function App() {
           default:
             console.log('Unknown event type:', eventType);
         }
-      });
+      }, webFallback);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error
@@ -207,6 +239,8 @@ function App() {
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+        webFallback={webFallback}
+        onToggleWeb={handleToggleWeb}
       />
     </div>
   );

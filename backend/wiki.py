@@ -8,6 +8,7 @@ pages most relevant to the user's question are injected.
 
 import os
 import re
+import shutil
 from typing import Dict, List, Optional
 
 from .config import WIKI_DIR, WIKI_MAX_CHARS
@@ -68,6 +69,17 @@ def delete_file(name: str) -> bool:
             d = os.path.dirname(d)
         return True
     return False
+
+
+def delete_folder(name: str) -> int:
+    """Remove a wiki folder and everything under it. Returns files removed (0 = nothing)."""
+    clean = _clean(name)
+    p = _path(clean) if clean else ""
+    if not clean or not os.path.isdir(p):
+        return 0
+    count = sum(1 for f in list_files() if f["name"].startswith(clean + "/"))
+    shutil.rmtree(p)
+    return count
 
 
 def _tokens(text: str) -> set:

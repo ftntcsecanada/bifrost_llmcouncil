@@ -83,10 +83,19 @@ export const api = {
     return `${API_BASE}/api/conversations/${conversationId}/export.html`;
   },
 
+  /** Remove an uploaded wiki folder and all its files. */
+  async deleteWikiFolder(name) {
+    const response = await fetch(
+      `${API_BASE}/api/wiki-folder/${name.split('/').map(encodeURIComponent).join('/')}`,
+      { method: 'DELETE' }
+    );
+    if (!response.ok) throw new Error('Delete folder failed');
+  },
+
   /** Remove an uploaded wiki file. */
   async deleteWiki(name) {
     const response = await fetch(
-      `${API_BASE}/api/wiki/${encodeURIComponent(name)}`,
+      `${API_BASE}/api/wiki/${name.split('/').map(encodeURIComponent).join('/')}`,
       { method: 'DELETE' }
     );
     if (!response.ok) throw new Error('Delete failed');
@@ -95,7 +104,7 @@ export const api = {
   /**
    * Send a message in a conversation.
    */
-  async sendMessage(conversationId, content) {
+  async sendMessage(conversationId, content, webFallback = false) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message`,
       {
@@ -103,7 +112,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, web_fallback: webFallback }),
       }
     );
     if (!response.ok) {
@@ -119,7 +128,7 @@ export const api = {
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent) {
+  async sendMessageStream(conversationId, content, onEvent, webFallback = false) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -127,7 +136,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, web_fallback: webFallback }),
       }
     );
 

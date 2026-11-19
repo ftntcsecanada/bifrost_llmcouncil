@@ -9,7 +9,7 @@ import uuid
 import json
 import asyncio
 
-from . import storage, wiki
+from . import storage, wiki, web
 from .render import render_conversation_html
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
 
@@ -33,6 +33,7 @@ class CreateConversationRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
+    web_fallback: bool = False
 
 
 class ConversationMetadata(BaseModel):
@@ -78,6 +79,15 @@ async def delete_wiki(name: str):
     if not wiki.delete_file(name):
         raise HTTPException(status_code=404, detail="File not found")
     return {"status": "deleted"}
+
+
+@app.delete("/api/wiki-folder/{name:path}")
+async def delete_wiki_folder(name: str):
+    """Remove an uploaded wiki folder and all its files."""
+    deleted = wiki.delete_folder(name)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    return {"status": "deleted", "deleted": deleted}
 
 
 @app.get("/api/conversations/{conversation_id}/export.html")
@@ -145,6 +155,9 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         title = await generate_conversation_title(request.content)
         storage.update_conversation_title(conversation_id, title)
 
+    # Optional web-search fallback when the wiki does not cover the question
+    web_sources = await web.prepare(request.content, request.web_fallback)
+
     # Run the 3-stage council process
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content
@@ -163,6 +176,7 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         "stage1": stage1_results,
         "stage2": stage2_results,
         "stage3": stage3_result,
+        "web_sources": web_sources,
         "metadata": metadata
     }
 
@@ -190,6 +204,12 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             title_task = None
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
+
+            # Optional web-search fallback (after title task is created so it stays wiki/web-free)
+            if request.web_fallback:
+                yield f"data: {json.dumps({'type': 'web_search_start'})}\n\n"
+                web_sources = await web.prepare(request.content, True)
+                yield f"data: {json.dumps({'type': 'web_search_complete', 'data': web_sources})}\n\n"
 
             # Stage 1: Collect responses
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"

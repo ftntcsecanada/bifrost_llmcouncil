@@ -41,6 +41,26 @@ export default function WikiPanel() {
     refresh();
   };
 
+  const onDeleteFolder = async (folder, count) => {
+    if (!window.confirm(`Remove folder "${folder}" and its ${count} file(s)?`)) return;
+    try {
+      await api.deleteWikiFolder(folder);
+      refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  // Group files by top-level folder; loose files go under a null key.
+  const groups = [];
+  for (const f of files) {
+    const i = f.name.indexOf('/');
+    const folder = i === -1 ? null : f.name.slice(0, i);
+    let g = groups.find((x) => x.folder === folder);
+    if (!g) groups.push((g = { folder, files: [] }));
+    g.files.push(f);
+  }
+
   const onDelete = async (name) => {
     try {
       await api.deleteWiki(name);
@@ -96,19 +116,43 @@ export default function WikiPanel() {
         {files.length === 0 ? (
           <li className="wiki-empty">No files uploaded</li>
         ) : (
-          files.map((f) => (
-            <li key={f.name} className="wiki-item">
-              <span className="wiki-name" title={f.name}>
-                {f.name}
-              </span>
-              <span className="wiki-size">{(f.size / 1024).toFixed(1)} KB</span>
-              <button
-                className="wiki-delete"
-                onClick={() => onDelete(f.name)}
-                aria-label={`Remove ${f.name}`}
-              >
-                ×
-              </button>
+          groups.map((g) => (
+            <li key={g.folder ?? '__root__'} className="wiki-group">
+              {g.folder && (
+                <div className="wiki-item wiki-folder">
+                  <span className="wiki-name" title={g.folder}>
+                    📁 {g.folder}/
+                  </span>
+                  <span className="wiki-size">{g.files.length} files</span>
+                  <button
+                    className="wiki-delete"
+                    onClick={() => onDeleteFolder(g.folder, g.files.length)}
+                    aria-label={`Remove folder ${g.folder}`}
+                    title="Remove folder"
+                  >
+                    🗑
+                  </button>
+                </div>
+              )}
+              <ul className={g.folder ? 'wiki-sublist' : 'wiki-list'}>
+                {g.files.map((f) => (
+                  <li key={f.name} className="wiki-item">
+                    <span className="wiki-name" title={f.name}>
+                      {g.folder ? f.name.slice(g.folder.length + 1) : f.name}
+                    </span>
+                    <span className="wiki-size">
+                      {(f.size / 1024).toFixed(1)} KB
+                    </span>
+                    <button
+                      className="wiki-delete"
+                      onClick={() => onDelete(f.name)}
+                      aria-label={`Remove ${f.name}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))
         )}

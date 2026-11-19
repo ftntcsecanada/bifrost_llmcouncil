@@ -93,3 +93,18 @@
   text-align: center;
   padding: 4px 0;
 }
+
+.wiki-group {
+  list-style: none;
+}
+
+.wiki-folder {
+  font-weight: 600;
+}
+
+.wiki-sublist {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0 0 0 14px;
+  border-left: 1px solid #e0e0e0;
+}
