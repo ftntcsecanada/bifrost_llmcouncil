@@ -8,6 +8,8 @@ export default function WikiPanel() {
   const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
   const folderRef = useRef(null);
+  // Folders start collapsed; open[folder] === true means expanded.
+  const [open, setOpen] = useState({});
 
   const refresh = async () => {
     try {
@@ -120,9 +122,19 @@ export default function WikiPanel() {
             <li key={g.folder ?? '__root__'} className="wiki-group">
               {g.folder && (
                 <div className="wiki-item wiki-folder">
-                  <span className="wiki-name" title={g.folder}>
-                    📁 {g.folder}/
-                  </span>
+                  <button
+                    className="wiki-toggle"
+                    onClick={() =>
+                      setOpen((o) => ({ ...o, [g.folder]: !o[g.folder] }))
+                    }
+                    aria-expanded={!!open[g.folder]}
+                    title={open[g.folder] ? 'Collapse' : 'Expand'}
+                  >
+                    <span className="wiki-chevron">
+                      {open[g.folder] ? '▾' : '▸'}
+                    </span>
+                    <span className="wiki-name">📁 {g.folder}/</span>
+                  </button>
                   <span className="wiki-size">{g.files.length} files</span>
                   <button
                     className="wiki-delete"
@@ -134,7 +146,10 @@ export default function WikiPanel() {
                   </button>
                 </div>
               )}
-              <ul className={g.folder ? 'wiki-sublist' : 'wiki-list'}>
+              <ul
+                className={g.folder ? 'wiki-sublist' : 'wiki-list'}
+                hidden={!!g.folder && !open[g.folder]}
+              >
                 {g.files.map((f) => (
                   <li key={f.name} className="wiki-item">
                     <span className="wiki-name" title={f.name}>

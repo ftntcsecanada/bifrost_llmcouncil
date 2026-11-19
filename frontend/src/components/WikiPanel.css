@@ -108,3 +108,27 @@
   padding: 0 0 0 14px;
   border-left: 1px solid #e0e0e0;
 }
+
+.wiki-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.wiki-chevron {
+  width: 12px;
+  color: #666;
+  flex: none;
+}
+
+.wiki-sublist[hidden] {
+  display: none;
+}

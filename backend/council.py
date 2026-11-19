@@ -5,6 +5,12 @@ from .bifrost import query_models_parallel, query_model
 from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, TITLE_MODEL
 from .wiki import with_context
 
+# Appended to answer-producing prompts so output stays readable without markdown tables.
+NO_TABLES = (
+    "Formatting: do not use tables (no pipe | tables or HTML tables). "
+    "Use short headings, bullet lists and bold text instead."
+)
+
 
 async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     """
@@ -16,7 +22,7 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     Returns:
         List of dicts with 'model' and 'response' keys
     """
-    messages = [{"role": "user", "content": with_context(user_query, user_query)}]
+    messages = [{"role": "user", "content": with_context(user_query, user_query) + "\n\n" + NO_TABLES}]
 
     # Query all models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -155,7 +161,9 @@ Your task as Chairman is to synthesize all of this information into a single, co
 - The peer rankings and what they reveal about response quality
 - Any patterns of agreement or disagreement
 
-Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
+Provide a clear, well-reasoned final answer that represents the council's collective wisdom:
+
+{NO_TABLES}"""
 
     messages = [{"role": "user", "content": with_context(chairman_prompt, user_query)}]
 
